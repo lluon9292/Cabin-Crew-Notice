@@ -152,6 +152,7 @@ body{
   position:fixed;inset:0;background:rgba(27,42,65,.45);
   display:flex;align-items:flex-end;justify-content:center;z-index:40;
 }
+.detail-view[hidden]{display:none;}
 .settings-card{
   background:#fff;width:100%;max-width:480px;border-radius:14px 14px 0 0;
   padding:1.3rem 1.2rem 1.6rem;
