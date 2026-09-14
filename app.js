@@ -79,10 +79,10 @@ async function syncFromGitHub(showToastOnFail = true) {
     const data = await res.json();
     if (!Array.isArray(data.tree)) throw new Error('저장소/브랜치 정보를 확인해줘.');
 
-    const notices = data.tree
+        const rawNotices = data.tree
       .filter(it => it.type === 'blob' && it.path.startsWith(rootPrefix) && /\.pdf$/i.test(it.path))
       .map(it => {
-        const rel = it.path.slice(rootPrefix.length);
+        const rel = it.path.slice(rootPrefix.length); // e.g. "Service/파일.pdf" or "파일.pdf"
         const segments = rel.split('/');
         const category = segments.length > 1 ? segments[0] : '미분류';
         const filename = segments[segments.length - 1];
@@ -94,6 +94,14 @@ async function syncFromGitHub(showToastOnFail = true) {
           url: buildRawUrl(owner, repo, branch, it.path)
         };
       });
+
+    // 내용이 완전히 같은 파일(sha 동일)은 한 번만 남긴다 — 실수로 중복 업로드된 경우 방지
+    const seen = new Set();
+    const notices = rawNotices.filter(n => {
+      if (seen.has(n.id)) return false;
+      seen.add(n.id);
+      return true;
+    });
 
     notices.sort((a, b) => {
       const rankDiff = categoryRank(a.category) - categoryRank(b.category);
