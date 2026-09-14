@@ -247,22 +247,36 @@ async function openDetail(n) {
   el('detailCat').textContent = n.category;
   el('detailTitle').textContent = n.title;
 
-  const cachedBefore = await isCached(n.url);
+    const cachedBefore = await isCached(n.url);
   el('detailCachedTag').textContent = cachedBefore ? '오프라인 저장됨' : (navigator.onLine ? '온라인에서 볼 수 있음 (저장 안 됨)' : '오프라인 · 아직 저장 안 됨');
   el('detailCachedTag').className = 'cached-tag' + (cachedBefore ? '' : ' pending');
 
   const btn = el('viewPdfBtn');
-  btn.disabled = !cachedBefore && !navigator.onLine;
-  btn.textContent = btn.disabled ? '오프라인 상태 · 열 수 없음' : 'PDF 보기';
 
-  btn.onclick = async () => {
-    const objectUrl = await getPdfObjectUrl(n.url);
+  if (!cachedBefore && !navigator.onLine) {
+    btn.disabled = true;
+    btn.textContent = '오프라인 상태 · 열 수 없음';
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '불러오는 중...';
+  const objectUrl = await getPdfObjectUrl(n.url);
+  btn.disabled = false;
+  btn.textContent = 'PDF 보기';
+  btn.onclick = () => {
     window.location.href = objectUrl;
   };
 
+  if (await isCached(n.url)) {
+    el('detailCachedTag').textContent = '오프라인 저장됨';
+    el('detailCachedTag').className = 'cached-tag';
+    renderList();
+  }
+
   window.scrollTo(0, 0);
 }
-
 function closeDetail() {
   el('detailView').hidden = true;
   el('listView').hidden = false;
