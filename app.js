@@ -79,10 +79,10 @@ async function syncFromGitHub(showToastOnFail = true) {
     const data = await res.json();
     if (!Array.isArray(data.tree)) throw new Error('저장소/브랜치 정보를 확인해줘.');
 
-        const rawNotices = data.tree
+    const rawNotices = data.tree
       .filter(it => it.type === 'blob' && it.path.startsWith(rootPrefix) && /\.pdf$/i.test(it.path))
       .map(it => {
-        const rel = it.path.slice(rootPrefix.length); // e.g. "Service/파일.pdf" or "파일.pdf"
+        const rel = it.path.slice(rootPrefix.length);
         const segments = rel.split('/');
         const category = segments.length > 1 ? segments[0] : '미분류';
         const filename = segments[segments.length - 1];
@@ -95,7 +95,6 @@ async function syncFromGitHub(showToastOnFail = true) {
         };
       });
 
-    // 내용이 완전히 같은 파일(sha 동일)은 한 번만 남긴다 — 실수로 중복 업로드된 경우 방지
     const seen = new Set();
     const notices = rawNotices.filter(n => {
       if (seen.has(n.id)) return false;
@@ -247,42 +246,37 @@ async function openDetail(n) {
 
   el('detailCat').textContent = n.category;
   el('detailTitle').textContent = n.title;
-  el('detailOpenLink').href = n.url;
-
-  const frame = el('pdfFrame');
-  const wrap = frame.parentElement;
-  frame.style.display = 'block';
-  const existingMsg = wrap.querySelector('.pdf-unavailable');
-  if (existingMsg) existingMsg.remove();
 
   const cachedBefore = await isCached(n.url);
-  el('detailCachedTag').textContent = cachedBefore ? '오프라인 저장됨' : (navigator.onLine ? '저장 중...' : '오프라인 · 미저장');
+  el('detailCachedTag').textContent = cachedBefore ? '오프라인 저장됨' : (navigator.onLine ? '온라인에서 볼 수 있음 (저장 안 됨)' : '오프라인 · 아직 저장 안 됨');
   el('detailCachedTag').className = 'cached-tag' + (cachedBefore ? '' : ' pending');
 
-  if (!cachedBefore && !navigator.onLine) {
-    frame.style.display = 'none';
-    const msg = document.createElement('div');
-    msg.className = 'pdf-unavailable';
-    msg.textContent = '이 PDF는 아직 오프라인에 저장돼 있지 않아요. 인터넷이 연결되면 다시 열어보거나, 설정에서 전체 PDF 내려받기를 미리 실행해줘.';
-    wrap.appendChild(msg);
-    window.scrollTo(0, 0);
-    return;
-  }
+  const btn = el('viewPdfBtn');
+  btn.disabled = !cachedBefore && !navigator.onLine;
+  btn.textContent = btn.disabled ? '오프라인 상태 · 열 수 없음' : 'PDF 보기';
 
-  const objectUrl = await getPdfObjectUrl(n.url);
-  frame.src = objectUrl;
-  el('detailCachedTag').textContent = '오프라인 저장됨';
-  el('detailCachedTag').className = 'cached-tag';
+  btn.onclick = async () => {
+    const winRef = window.open('', '_blank');
+    const objectUrl = await getPdfObjectUrl(n.url);
+    if (winRef) {
+      winRef.location.href = objectUrl;
+    } else {
+      window.location.href = objectUrl;
+    }
+    const nowCached = await isCached(n.url);
+    if (nowCached) {
+      el('detailCachedTag').textContent = '오프라인 저장됨';
+      el('detailCachedTag').className = 'cached-tag';
+      renderList();
+    }
+  };
+
   window.scrollTo(0, 0);
-  renderList();
 }
 
 function closeDetail() {
   el('detailView').hidden = true;
   el('listView').hidden = false;
-  const frame = el('pdfFrame');
-  if (frame.src && frame.src.startsWith('blob:')) URL.revokeObjectURL(frame.src);
-  frame.src = '';
 }
 
 /* ---------------- Settings panel ---------------- */
