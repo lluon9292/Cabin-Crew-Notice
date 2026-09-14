@@ -256,19 +256,8 @@ async function openDetail(n) {
   btn.textContent = btn.disabled ? '오프라인 상태 · 열 수 없음' : 'PDF 보기';
 
   btn.onclick = async () => {
-    const winRef = window.open('', '_blank');
     const objectUrl = await getPdfObjectUrl(n.url);
-    if (winRef) {
-      winRef.location.href = objectUrl;
-    } else {
-      window.location.href = objectUrl;
-    }
-    const nowCached = await isCached(n.url);
-    if (nowCached) {
-      el('detailCachedTag').textContent = '오프라인 저장됨';
-      el('detailCachedTag').className = 'cached-tag';
-      renderList();
-    }
+    window.location.href = objectUrl;
   };
 
   window.scrollTo(0, 0);
